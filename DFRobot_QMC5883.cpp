@@ -46,10 +46,23 @@ bool DFRobot_QMC5883::begin(void)
     for(uint8_t i = 0; i < 5; i++)
     {
       _pWire->begin();
-      _pWire->beginTransmission(QMC5883_ADDRESS);
+      _pWire->beginTransmission(QMC5883L_ADDRESS);
       if(_pWire->endTransmission() == 0)
       {
-        ICType = IC_QMC5883;
+        ICType = IC_QMC5883L;
+        break;
+      }
+    }
+  }
+  if(ICType == IC_NONE)
+  {
+    for(uint8_t i = 0; i < 5; i++)
+    {
+      _pWire->begin();
+      _pWire->beginTransmission(QMC5883P_ADDRESS);
+      if(_pWire->endTransmission() == 0)
+      {
+        ICType = IC_QMC5883P;
         break;
       }
     }
@@ -84,20 +97,34 @@ bool DFRobot_QMC5883::begin(void)
       mgPerDigit = 0.92f;
       ret = true;
       break;
-    case IC_QMC5883:
-      writeRegister8(QMC5883_REG_IDENT_B,0X01);
-      writeRegister8(QMC5883_REG_IDENT_C,0X40);
-      writeRegister8(QMC5883_REG_IDENT_D,0X01);
-      writeRegister8(QMC5883_REG_CONFIG_1,0X1D);
-      if ((fastRegister8(QMC5883_REG_IDENT_B) != 0x01)|| (fastRegister8(QMC5883_REG_IDENT_C) != 0x40)|| (fastRegister8(QMC5883_REG_IDENT_D) != 0x01))
+    case IC_QMC5883L:
+      writeRegister8(QMC5883L_REG_IDENT_B,0X01);
+      writeRegister8(QMC5883L_REG_IDENT_C,0X40);
+      writeRegister8(QMC5883L_REG_IDENT_D,0X01);
+      writeRegister8(QMC5883L_REG_CONFIG_1,0X1D);
+      if ((fastRegister8(QMC5883L_REG_IDENT_B) != 0x01)|| (fastRegister8(QMC5883L_REG_IDENT_C) != 0x40)|| (fastRegister8(QMC5883L_REG_IDENT_D) != 0x01))
       {
         return false;
       }
-      setRange(QMC5883_RANGE_8GA);
-      setMeasurementMode(QMC5883_CONTINOUS);
-      setDataRate(QMC5883_DATARATE_50HZ);
-      setSamples(QMC5883_SAMPLES_8);
+      setRange(QMC5883L_RANGE_8GA);
+      setMeasurementMode(QMC5883L_CONTINOUS);
+      setDataRate(QMC5883L_DATARATE_50HZ);
+      setSamples(QMC5883L_SAMPLES_4);
       mgPerDigit = 4.35f;
+      ret = true;
+      break;
+    case IC_QMC5883P:
+      if (fastRegister8(QMC5883P_REG_CHIPID) != 0x80)
+      {
+        return false;
+      }
+      writeRegister8(0x29, 0X06);//datasheet 7.2
+      writeRegister8(QMC5883P_REG_CONFIG_2, 0x08);//Define Set/Reset mode, with Set/Reset On, Field Range 8Guass
+      writeRegister8(QMC5883P_REG_CONFIG_1, 0x08);//set continuous mode
+      setRange(QMC5883P_RANGE_8GA);
+      setMeasurementMode(QMC5883P_CONTINOUS);
+      setDataRate(QMC5883P_DATARATE_100HZ);
+      setSamples(QMC5883P_SAMPLES_4);
       ret = true;
       break;
     case IC_VCM5883L:
@@ -120,11 +147,17 @@ sVector_t DFRobot_QMC5883::readRaw(void)
     v.YAxis = readRegister16(HMC5883L_REG_OUT_Y_M);
     v.ZAxis = readRegister16(HMC5883L_REG_OUT_Z_M);
   }
-  else if(ICType == IC_QMC5883)
+  else if(ICType == IC_QMC5883L)
   {
-    v.XAxis = readRegister16(QMC5883_REG_OUT_X_L);
-    v.YAxis = readRegister16(QMC5883_REG_OUT_Y_L);
-    v.ZAxis = readRegister16(QMC5883_REG_OUT_Z_L);
+    v.XAxis = readRegister16(QMC5883L_REG_OUT_X_L);
+    v.YAxis = readRegister16(QMC5883L_REG_OUT_Y_L);
+    v.ZAxis = readRegister16(QMC5883L_REG_OUT_Z_L);
+  }
+  else if(ICType == IC_QMC5883P)
+  {
+    v.XAxis = readRegister16(QMC5883P_REG_OUT_X_L);
+    v.YAxis = readRegister16(QMC5883P_REG_OUT_Y_L);
+    v.ZAxis = readRegister16(QMC5883P_REG_OUT_Z_L);
   }
   else if(ICType == IC_VCM5883L)
   {
@@ -173,20 +206,27 @@ void DFRobot_QMC5883::setRange(eRange_t range)
     }
     writeRegister8(HMC5883L_REG_CONFIG_B, range << 5);
   }
-  else if(ICType == IC_QMC5883)
+  else if(ICType == IC_QMC5883L)
   {
     switch(range)
     {
-      case QMC5883_RANGE_2GA:
+      case QMC5883L_RANGE_2GA:
         mgPerDigit = 1.22f;
         break;
-      case QMC5883_RANGE_8GA:
+      case QMC5883L_RANGE_8GA:
         mgPerDigit = 4.35f;
         break;
       default:
         break;
     }
-    writeRegister8(QMC5883_REG_CONFIG_2, range << 4);
+    writeRegister8(QMC5883L_REG_CONFIG_2, range << 4);
+  }
+  else if(ICType == IC_QMC5883P)
+  {
+    uint8_t value = readRegister8(QMC5883P_REG_CONFIG_2);
+    value &= 0b11110011;
+    value |= (range << 2);
+    writeRegister8(QMC5883P_REG_CONFIG_2, value);
   }
   else if(ICType == IC_VCM5883L)
   {
@@ -201,14 +241,17 @@ eRange_t DFRobot_QMC5883::getRange(void)
     case IC_HMC5883L:
       ret = (eRange_t)((readRegister8(HMC5883L_REG_CONFIG_B) >> 5));
       break;
-    case IC_QMC5883:
-      ret = (eRange_t)((readRegister8(QMC5883_REG_CONFIG_2) >> 4));
+    case IC_QMC5883L:
+      ret = (eRange_t)((readRegister8(QMC5883L_REG_CONFIG_2) >> 4));
+      break;
+    case IC_QMC5883P:
+      ret = (eRange_t)((readRegister8(QMC5883P_REG_CONFIG_2) >> 2));
       break;
     case IC_VCM5883L:
-      ret = QMC5883_RANGE_8GA;
+      ret = QMC5883L_RANGE_8GA;
       break;
     default:
-      ret = QMC5883_RANGE_8GA;
+      ret = QMC5883L_RANGE_8GA;
       break;
   }
   return ret;
@@ -225,12 +268,25 @@ void DFRobot_QMC5883::setMeasurementMode(eMode_t mode)
       value |= mode;
       writeRegister8(HMC5883L_REG_MODE, value);
       break;
-    case IC_QMC5883:
-      value = readRegister8(QMC5883_REG_CONFIG_1);
+    case IC_QMC5883L:
+      value = readRegister8(QMC5883L_REG_CONFIG_1);
       value &= 0xfc;
       value |= mode;
-      writeRegister8(QMC5883_REG_CONFIG_1, value);
+      writeRegister8(QMC5883L_REG_CONFIG_1, value);
       break;
+    case IC_QMC5883P:
+      value = readRegister8(QMC5883P_REG_CONFIG_1);
+      if(uint8_t(value & 0b11) == (uint8_t)mode)
+        return;
+      if((value & 0b11) != 0) //suspend mode
+      {//Suspend Mode should be added in the middle of mode shifting between Continuous Mode��Single Mode and Normal Mode
+        value &= 0xfc;
+        writeRegister8(QMC5883P_REG_CONFIG_1, value);
+        delay(1);
+      }
+      value &= 0xfc;
+      value |= mode;
+      writeRegister8(QMC5883P_REG_CONFIG_1, value);
     case IC_VCM5883L:
       value = readRegister8(VCM5883L_CTR_REG2);
       value &= 0xFE;
@@ -251,8 +307,12 @@ eMode_t DFRobot_QMC5883::getMeasurementMode(void)
       value = readRegister8(HMC5883L_REG_MODE);
       value &= 0b00000011;  
       break;
-    case IC_QMC5883:
-      value = readRegister8(QMC5883_REG_CONFIG_1);
+    case IC_QMC5883L:
+      value = readRegister8(QMC5883L_REG_CONFIG_1);
+      value &= 0b00000011;  
+      break;
+    case IC_QMC5883P:
+      value = readRegister8(QMC5883P_REG_CONFIG_1);
       value &= 0b00000011;  
       break;
     case IC_VCM5883L:
@@ -276,11 +336,17 @@ void DFRobot_QMC5883::setDataRate(eDataRate_t dataRate)
       value |= (dataRate << 2);
       writeRegister8(HMC5883L_REG_CONFIG_A, value);
       break;
-    case IC_QMC5883:
-      value = readRegister8(QMC5883_REG_CONFIG_1);
+    case IC_QMC5883L:
+      value = readRegister8(QMC5883L_REG_CONFIG_1);
       value &= 0xf3;
       value |= (dataRate << 2);
-      writeRegister8(QMC5883_REG_CONFIG_1, value);
+      writeRegister8(QMC5883L_REG_CONFIG_1, value);
+      break;
+    case IC_QMC5883P:
+      value = readRegister8(QMC5883P_REG_CONFIG_1);
+      value &= 0b11110011;
+      value |= (dataRate << 2);
+      writeRegister8(QMC5883P_REG_CONFIG_1, value);
       break;
     case IC_VCM5883L:
       value = readRegister8(VCM5883L_CTR_REG2);
@@ -303,8 +369,13 @@ eDataRate_t DFRobot_QMC5883::getDataRate(void)
       value &= 0b00011100;
       value >>= 2;
       break;
-    case IC_QMC5883:
-      value = readRegister8(QMC5883_REG_CONFIG_1);
+    case IC_QMC5883L:
+      value = readRegister8(QMC5883L_REG_CONFIG_1);
+      value &= 0b00001100;
+      value >>= 2;
+      break;
+    case IC_QMC5883P:
+      value = readRegister8(QMC5883P_REG_CONFIG_1);
       value &= 0b00001100;
       value >>= 2;
       break;
@@ -330,17 +401,23 @@ void DFRobot_QMC5883::setSamples(eSamples_t samples)
       value |= (samples << 5);
       writeRegister8(HMC5883L_REG_CONFIG_A, value);
       break;
-    case IC_QMC5883:
-      value = readRegister8(QMC5883_REG_CONFIG_1);
+    case IC_QMC5883L:
+      value = readRegister8(QMC5883L_REG_CONFIG_1);
       value &= 0x3f;
       value |= (samples << 6);
-      writeRegister8(QMC5883_REG_CONFIG_1, value);
+      writeRegister8(QMC5883L_REG_CONFIG_1, value);
+      break;
+    case IC_QMC5883P:
+      value = readRegister8(QMC5883P_REG_CONFIG_1);
+      value &= 0b11001111;
+      value |= (samples << 4);
+      writeRegister8(QMC5883P_REG_CONFIG_1, value);
       break;
     case IC_VCM5883L:
-      value = readRegister8(QMC5883_REG_CONFIG_1);
+      value = readRegister8(QMC5883L_REG_CONFIG_1);
       value &= 0x3f;
       value |= (samples << 6);
-      writeRegister8(QMC5883_REG_CONFIG_1, value);
+      writeRegister8(QMC5883L_REG_CONFIG_1, value);
       break;
     default:
       break;
@@ -357,13 +434,18 @@ eSamples_t DFRobot_QMC5883::getSamples(void)
       value &= 0b01100000;
       value >>= 5;
       break;
-    case IC_QMC5883:
-      value = readRegister8(QMC5883_REG_CONFIG_1);
-      value &= 0x3f;
+    case IC_QMC5883L:
+      value = readRegister8(QMC5883L_REG_CONFIG_1);
+      value &= 0b11000000;
       value >>= 6;
       break;
+    case IC_QMC5883P:
+      value = readRegister8(QMC5883P_REG_CONFIG_1);
+      value &= 0b00110000;
+      value >>= 4;
+      break;
     case IC_VCM5883L:
-      value = readRegister8(QMC5883_REG_CONFIG_1);
+      value = readRegister8(QMC5883L_REG_CONFIG_1);
       value &= 0x3f;
       value >>= 6;
       break;
@@ -392,6 +474,22 @@ void DFRobot_QMC5883::getHeadingDegrees(void)
 int DFRobot_QMC5883::getICType(void)
 {
   return ICType;
+}
+
+bool DFRobot_QMC5883::dataReady(void)
+{
+  switch(ICType){
+    case IC_HMC5883L:
+      return (readRegister8(HMC5883L_REG_STATUS) & 0x01);
+    case IC_QMC5883L:
+      return (readRegister8(QMC5883L_REG_STATUS) & 0x01);
+    case IC_QMC5883P:
+      return (fastRegister8(QMC5883P_REG_STATUS) & 0x01);
+    case IC_VCM5883L:
+      return true;
+    default:
+      return false;
+  }
 }
 
 void DFRobot_QMC5883::writeRegister8(uint8_t reg, uint8_t value)
@@ -427,7 +525,6 @@ uint8_t DFRobot_QMC5883::fastRegister8(uint8_t reg)
   return value;
 }
 
-
 uint8_t DFRobot_QMC5883::readRegister8(uint8_t reg)
 {
   uint8_t value=0;
@@ -439,7 +536,6 @@ uint8_t DFRobot_QMC5883::readRegister8(uint8_t reg)
   #endif
   _pWire->endTransmission();
   _pWire->requestFrom((uint8_t)this->_I2C_addr, (uint8_t)1);
-  while(!_pWire->available()) {};
   #if ARDUINO >= 100
     value = _pWire->read();
   #else
@@ -460,7 +556,6 @@ int16_t DFRobot_QMC5883::readRegister16(uint8_t reg)
   #endif
   _pWire->endTransmission();
   _pWire->requestFrom((uint8_t)this->_I2C_addr, (uint8_t)2);
-  while(!_pWire->available()) {};
   if(ICType == IC_HMC5883L){
     #if ARDUINO >= 100
       vha = _pWire->read();

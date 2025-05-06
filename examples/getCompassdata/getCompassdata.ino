@@ -8,7 +8,7 @@
  * @date  2017-7-3
  * @url https://github.com/DFRobot/DFRobot_QMC5883
  */
-#include <DFRobot_QMC5883.h>
+#include "DFRobot_QMC5883.h"
 
 DFRobot_QMC5883 compass(&Wire, /*I2C addr*/VCM5883L_ADDRESS);
 
@@ -45,22 +45,41 @@ void setup()
     // Serial.print("compass samples is:");
     // Serial.println(compass.getSamples());
   }
-  else if(compass.isQMC())
+  else if(compass.isQMCL())
   {
-    Serial.println("Initialize QMC5883");
-    // compass.setRange(QMC5883_RANGE_2GA);
+    Serial.println("Initialize QMC5883L");
+    // compass.setRange(QMC5883L_RANGE_2GA);
     // Serial.print("compass range is:");
     // Serial.println(compass.getRange());
 
-    // compass.setMeasurementMode(QMC5883_CONTINOUS);
+    // compass.setMeasurementMode(QMC5883L_CONTINOUS);
     // Serial.print("compass measurement mode is:");
     // Serial.println(compass.getMeasurementMode());
 
-    // compass.setDataRate(QMC5883_DATARATE_50HZ);
+    // compass.setDataRate(QMC5883L_DATARATE_50HZ);
     // Serial.print("compass data rate is:");
     // Serial.println(compass.getDataRate());
 
-    // compass.setSamples(QMC5883_SAMPLES_8);
+    // compass.setSamples(QMC5883L_SAMPLES_8);
+    // Serial.print("compass samples is:");
+    // Serial.println(compass.getSamples());
+  }
+  else if(compass.isQMCP())
+  {
+    Serial.println("Initialize QMC5883P");
+    // compass.setRange(QMC5883P_RANGE_2GA);
+    // Serial.print("compass range is:");
+    // Serial.println(compass.getRange());
+
+    // compass.setMeasurementMode(QMC5883P_CONTINOUS);
+    // Serial.print("compass measurement mode is:");
+    // Serial.println(compass.getMeasurementMode());
+
+    // compass.setDataRate(QMC5883P_DATARATE_50HZ);
+    // Serial.print("compass data rate is:");
+    // Serial.println(compass.getDataRate());
+
+    // compass.setSamples(QMC5883P_SAMPLES_8);
     // Serial.print("compass samples is:");
     // Serial.println(compass.getSamples());
   }

@@ -19,7 +19,7 @@ This low-cost 10 DOF (degrees of the freedom) sensor from dfrobot is highly inte
 * [Credits](#credits)
 
 ## Summary
-This library provides drivers for the QMC5883, HMC5883 and VMC5883.
+This library provides drivers for the QMC5883L, QMC5883P, HMC5883 and VMC5883.
 
 ## Installation
 

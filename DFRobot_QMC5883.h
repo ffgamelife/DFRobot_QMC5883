@@ -20,14 +20,16 @@
 #include <Wire.h>
 
 #define HMC5883L_ADDRESS             (0x1E)
-#define QMC5883_ADDRESS              (0x0D)
+#define QMC5883L_ADDRESS             (0x0D)
 #define VCM5883L_ADDRESS             (0x0C)
+#define QMC5883P_ADDRESS             (0x2C)
 
 #define IC_NONE     0
 #define IC_HMC5883L 1
-#define IC_QMC5883  2
-#define IC_VCM5883L 3
-#define IC_ERROR    4
+#define IC_QMC5883L 2
+#define IC_QMC5883P 3
+#define IC_VCM5883L 4
+#define IC_ERROR    5
 
 #define HMC5883L_REG_CONFIG_A         (0x00)
 #define HMC5883L_REG_CONFIG_B         (0x01)
@@ -43,18 +45,29 @@
 #define HMC5883L_REG_IDENT_B          (0x0B)
 #define HMC5883L_REG_IDENT_C          (0x0C)
 
-#define QMC5883_REG_OUT_X_M          (0x01)
-#define QMC5883_REG_OUT_X_L          (0x00)
-#define QMC5883_REG_OUT_Z_M          (0x05)
-#define QMC5883_REG_OUT_Z_L          (0x04)
-#define QMC5883_REG_OUT_Y_M          (0x03)
-#define QMC5883_REG_OUT_Y_L          (0x02)
-#define QMC5883_REG_STATUS           (0x06)
-#define QMC5883_REG_CONFIG_1         (0x09)
-#define QMC5883_REG_CONFIG_2         (0x0A)
-#define QMC5883_REG_IDENT_B          (0x0B)
-#define QMC5883_REG_IDENT_C          (0x20)
-#define QMC5883_REG_IDENT_D          (0x21)
+#define QMC5883L_REG_OUT_X_M          (0x01)
+#define QMC5883L_REG_OUT_X_L          (0x00)
+#define QMC5883L_REG_OUT_Z_M          (0x05)
+#define QMC5883L_REG_OUT_Z_L          (0x04)
+#define QMC5883L_REG_OUT_Y_M          (0x03)
+#define QMC5883L_REG_OUT_Y_L          (0x02)
+#define QMC5883L_REG_STATUS           (0x06)
+#define QMC5883L_REG_CONFIG_1         (0x09)
+#define QMC5883L_REG_CONFIG_2         (0x0A)
+#define QMC5883L_REG_IDENT_B          (0x0B)
+#define QMC5883L_REG_IDENT_C          (0x20)
+#define QMC5883L_REG_IDENT_D          (0x21)
+
+#define QMC5883P_REG_CHIPID           (0x00)
+#define QMC5883P_REG_OUT_X_L          (0x01)
+#define QMC5883P_REG_OUT_X_M          (0x02)
+#define QMC5883P_REG_OUT_Y_L          (0x03)
+#define QMC5883P_REG_OUT_Y_M          (0x04)
+#define QMC5883P_REG_OUT_Z_L          (0x05)
+#define QMC5883P_REG_OUT_Z_M          (0x06)
+#define QMC5883P_REG_STATUS           (0x09)
+#define QMC5883P_REG_CONFIG_1         (0x0A)
+#define QMC5883P_REG_CONFIG_2         (0x0B)
 
 #define VCM5883L_REG_OUT_X_L          (0x00)
 #define VCM5883L_REG_OUT_X_H          (0x01)
@@ -71,10 +84,14 @@ typedef enum
   HMC5883L_SAMPLES_4    = 0b10,
   HMC5883L_SAMPLES_2    = 0b01,
   HMC5883L_SAMPLES_1    = 0b00,
-  QMC5883_SAMPLES_8     = 0b11,
-  QMC5883_SAMPLES_4     = 0b10,
-  QMC5883_SAMPLES_2     = 0b01,
-  QMC5883_SAMPLES_1     = 0b00
+  QMC5883L_SAMPLES_8     = 0b11,
+  QMC5883L_SAMPLES_4     = 0b10,
+  QMC5883L_SAMPLES_2     = 0b01,
+  QMC5883L_SAMPLES_1     = 0b00,
+  QMC5883P_SAMPLES_1     = 0b11,
+  QMC5883P_SAMPLES_2     = 0b10,
+  QMC5883P_SAMPLES_4     = 0b01,
+  QMC5883P_SAMPLES_8     = 0b00
 } eSamples_t;
 
 typedef enum
@@ -86,10 +103,14 @@ typedef enum
   HMC5883L_DATARATE_3HZ        = 0b010,
   HMC5883L_DATARATE_1_5HZ      = 0b001,
   HMC5883L_DATARATE_0_75_HZ    = 0b000,
-  QMC5883_DATARATE_10HZ        = 0b00,
-  QMC5883_DATARATE_50HZ        = 0b01,
-  QMC5883_DATARATE_100HZ       = 0b10,
-  QMC5883_DATARATE_200HZ       = 0b11,
+  QMC5883L_DATARATE_10HZ        = 0b00,
+  QMC5883L_DATARATE_50HZ        = 0b01,
+  QMC5883L_DATARATE_100HZ       = 0b10,
+  QMC5883L_DATARATE_200HZ       = 0b11,
+  QMC5883P_DATARATE_10HZ        = 0b00,
+  QMC5883P_DATARATE_50HZ        = 0b01,
+  QMC5883P_DATARATE_100HZ      = 0b10,
+  QMC5883P_DATARATE_200HZ      = 0b11,
   VCM5883L_DATARATE_200HZ      = 0b00,
   VCM5883L_DATARATE_100HZ      = 0b01,
   VCM5883L_DATARATE_50HZ       = 0b10,
@@ -106,8 +127,12 @@ typedef enum
   HMC5883L_RANGE_1_9GA     = 0b010,
   HMC5883L_RANGE_1_3GA    = 0b001,
   HMC5883L_RANGE_0_88GA    = 0b000,
-  QMC5883_RANGE_2GA     = 0b00,
-  QMC5883_RANGE_8GA     = 0b01,
+  QMC5883L_RANGE_2GA     = 0b00,
+  QMC5883L_RANGE_8GA     = 0b01,
+  QMC5883P_RANGE_2GA     = 0b11,
+  QMC5883P_RANGE_8GA     = 0b10,
+  QMC5883P_RANGE_12GA     = 0b01,
+  QMC5883P_RANGE_30GA     = 0b00,
   VCM5883L_RANGE_8GA    = 0b01,
 } eRange_t;
 
@@ -116,8 +141,11 @@ typedef enum
   HMC5883L_IDLE         = 0b10,
   HMC5883_SINGLE        = 0b01,
   HMC5883L_CONTINOUS    = 0b00,
-  QMC5883_SINGLE        = 0b00,
-  QMC5883_CONTINOUS     = 0b01,
+  QMC5883L_SINGLE        = 0b00,
+  QMC5883L_CONTINOUS     = 0b01,
+  QMC5883P_NORMAL        = 0b01,
+  QMC5883P_SINGLE        = 0b10,
+  QMC5883P_CONTINOUS     = 0b11,
   VCM5883L_SINGLE       = 0b0,
   VCM5883L_CONTINOUS    = 0b1,
 } eMode_t;
@@ -168,8 +196,8 @@ class DFRobot_QMC5883
      * @n    HMC5883L_RANGE_1_9GA    
      * @n    HMC5883L_RANGE_1_3GA //default    
      * @n    HMC5883L_RANGE_0_88GA   
-     * @n    QMC5883_RANGE_2GA     
-     * @n    QMC5883_RANGE_8GA     
+     * @n    QMC5883L_RANGE_2GA     
+     * @n    QMC5883L_RANGE_8GA     
      * @n    VCM5883L_RANGE_8GA    
      */
     void  setRange(eRange_t range);
@@ -188,8 +216,8 @@ class DFRobot_QMC5883
      * @n     HMC5883L_IDLE
      * @n     HMC5883_SINGLE
      * @n     HMC5883L_CONTINOUS
-     * @n     QMC5883_SINGLE
-     * @n     QMC5883_CONTINOUS
+     * @n     QMC5883L_SINGLE
+     * @n     QMC5883L_CONTINOUS
      * @n     VCM5883L_SINGLE
      * @n     VCM5883L_CONTINOUS
      */
@@ -213,10 +241,10 @@ class DFRobot_QMC5883
      * @n     HMC5883L_DATARATE_3HZ
      * @n     HMC5883L_DATARATE_1_5HZ
      * @n     HMC5883L_DATARATE_0_75_HZ
-     * @n     QMC5883_DATARATE_10HZ
-     * @n     QMC5883_DATARATE_50HZ
-     * @n     QMC5883_DATARATE_100HZ
-     * @n     QMC5883_DATARATE_200HZ
+     * @n     QMC5883L_DATARATE_10HZ
+     * @n     QMC5883L_DATARATE_50HZ
+     * @n     QMC5883L_DATARATE_100HZ
+     * @n     QMC5883L_DATARATE_200HZ
      * @n     VCM5883L_DATARATE_200HZ
      * @n     VCM5883L_DATARATE_100HZ
      * @n     VCM5883L_DATARATE_50HZ
@@ -239,10 +267,10 @@ class DFRobot_QMC5883
      * @n     HMC5883L_SAMPLES_4
      * @n     HMC5883L_SAMPLES_2
      * @n     HMC5883L_SAMPLES_1
-     * @n     QMC5883_SAMPLES_8
-     * @n     QMC5883_SAMPLES_4
-     * @n     QMC5883_SAMPLES_2
-     * @n     QMC5883_SAMPLES_1
+     * @n     QMC5883L_SAMPLES_8
+     * @n     QMC5883L_SAMPLES_4
+     * @n     QMC5883L_SAMPLES_2
+     * @n     QMC5883L_SAMPLES_1
      */
     void  setSamples(eSamples_t samples);
 
@@ -289,7 +317,16 @@ class DFRobot_QMC5883
      * @retval ture it is
      * @retval false it isn't
      */
-    bool isQMC(void){if(ICType == IC_QMC5883 ){return true;}return false;}
+    bool isQMCL(void){if(ICType == IC_QMC5883L ){return true;}return false;}
+
+    /**
+     * @fn  isQMCP
+     * @brief Determine if the sensor type is QMC5883P
+     * @return bool
+     * @retval ture it is
+     * @retval false it isn't
+     */
+    bool isQMCP(void){if(ICType == IC_QMC5883P ){return true;}return false;}
 
     /**
      * @fn  isVCM
@@ -299,6 +336,16 @@ class DFRobot_QMC5883
      * @retval false it isn't
      */
     bool isVCM(void){if(ICType == IC_VCM5883L ){return true;}return false;}
+
+    /**
+     * @fn  dataReady
+     * @brief Check if the sensor data is ready
+     * @return bool
+     * @retval ture it is
+     * @retval false it isn't
+     */
+    bool dataReady(void);
+
   private:
     void writeRegister8(uint8_t reg, uint8_t value);
     uint8_t readRegister8(uint8_t reg);
